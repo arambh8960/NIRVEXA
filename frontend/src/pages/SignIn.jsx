@@ -27,6 +27,13 @@ function SignIn() {
         { withCredentials: true }
 
       );
+
+      if (res.data.role !== role) {
+        await axios.get(`${serverUrl}/api/auth/signout`, { withCredentials: true });
+        alert("User does not exist with this role");
+        return;
+      }
+
       dispatch(setUserData(res.data));
       navigate("/"); // Redirect to home/dashboard
     } catch (error) {
@@ -48,6 +55,13 @@ function SignIn() {
         email: result.user.email,
         role,
       }, { withCredentials: true });
+
+      if (res.data.role !== role) {
+        await axios.get(`${serverUrl}/api/auth/signout`, { withCredentials: true });
+        alert("User does not exist with this role");
+        return;
+      }
+
       dispatch(setUserData(res.data));
       
       navigate("/");

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -18,5 +19,15 @@ export const sendOtpMail = async (to, otp) => {
     to,
     subject: "Reset Your Password",
     html: `<p>Your OTP for password reset is <b>${otp}</b>. It will expire in 5 minutes.</p>`,
+  });
+};
+
+
+export const sendDeliveryOtpMail = async (user, otp) => {
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to: user.email,
+    subject: "Delivery OTP",
+    html: `<p>Your OTP for delivery is <b>${otp}</b>. It will expire in 5 minutes.</p>`,
   });
 };

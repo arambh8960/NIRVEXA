@@ -33,7 +33,32 @@ const userSchema=new mongoose.Schema({
     },
     otpExpires:{
         type:Date
+    },
+    socketId:{
+        type:String,
+        
+    },
+    isOnline:{
+        type:Boolean,
+        default:false
+    },
+ 
+    location:{
+       type:{
+        type:String,
+        enum:["Point"],
+        default:"Point"
+       },
+       coordinates:{
+        type:[Number],
+        default:[0,0],
+        
+       }
     }
+
 },{timestamps:true})
+
+userSchema.index({location:"2dsphere"})//mongodb ko samjh aa jayega ki location ke bare me baat hai
+
 const User=mongoose.model("User",userSchema);
 export default User;

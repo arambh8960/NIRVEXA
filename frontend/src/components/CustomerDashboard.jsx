@@ -2,43 +2,89 @@ import React, { useEffect, useRef, useState } from 'react'
 import Nav from './Nav.jsx'
 import { categories } from '../category'
 import CategoryCard from './CategoryCard'
-import { FaCircleChevronLeft, FaCircleChevronRight } from "react-icons/fa6";
+import { FaCircleChevronLeft, FaCircleChevronRight } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import FoodCard from './MaterialCard'
 
+// data hooks
+import useGetShopByCity from '../hooks/useGetShopByCity'
+import useGetItemsByCity from '../hooks/useGetItemsByCity'
 
 function CustomerDashboard() {
-  const { currentCity, shopInMyCity, itemsInMyCity, searchItems } =
+  useGetShopByCity()
+  useGetItemsByCity()
+
+  const { currentCity, shopInMyCity, itemsInMyCity } =
     useSelector(state => state.user)
 
-  const cateScrollRef = useRef()
-  const shopScrollRef = useRef()
-  const navigate = useNavigate()
-//scroll wala section ke liye hai
+  /* ================= STATE ================= */
+  const [activeCategory, setActiveCategory] = useState(null)
+  const [activeShopId, setActiveShopId] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredItems, setFilteredItems] = useState([])
+
+  /* ================= REFS ================= */
+  const cateScrollRef = useRef(null)
+  const shopScrollRef = useRef(null)
+
   const [showLeftCateButton, setShowLeftCateButton] = useState(false)
   const [showRightCateButton, setShowRightCateButton] = useState(false)
   const [showLeftShopButton, setShowLeftShopButton] = useState(false)
   const [showRightShopButton, setShowRightShopButton] = useState(false)
-  const [updatedItemsList, setUpdatedItemsList] = useState([])
 
-  const handleFilterByCategory = (category) => {
-    if (category === "All") {
-      setUpdatedItemsList(itemsInMyCity)
-    } else {
-      setUpdatedItemsList(itemsInMyCity?.filter(i => i.category === category))
+  /* ================= CORE FILTER LOGIC ================= */
+  useEffect(() => {
+    let result = itemsInMyCity || []
+
+    // shop filter
+    if (activeShopId) {
+      result = result.filter(item => item.shop?._id === activeShopId)
     }
+
+    // category filter
+    if (activeCategory) {
+      result = result.filter(
+        item => item.category === activeCategory.toLowerCase()
+      )
+    }
+
+    // search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q)
+      )
+    }
+
+    setFilteredItems(result)
+  }, [itemsInMyCity, activeCategory, activeShopId, searchQuery])
+
+  /* ================= HANDLERS ================= */
+  const handleCategoryClick = (category) => {
+    // 🔁 toggle same category
+    setActiveCategory(prev =>
+      prev === category ? null : category
+    )
   }
 
-  useEffect(() => {
-    setUpdatedItemsList(itemsInMyCity)
-  }, [itemsInMyCity])
+  const handleShopClick = (shopId) => {
+    // 🔁 toggle same shop
+    setActiveShopId(prev =>
+      prev === shopId ? null : shopId
+    )
+  }
 
+  const handleSearch = (value) => {
+    setSearchQuery(value)
+  }
+
+  /* ================= SCROLL LOGIC ================= */
   const updateButton = (ref, setLeft, setRight) => {
     const el = ref.current
-    if (el) {
-      setLeft(el.scrollLeft > 0)
-      setRight(el.scrollLeft + el.clientWidth < el.scrollWidth)
-    }
+    if (!el) return
+    setLeft(el.scrollLeft > 0)
+    setRight(el.scrollLeft + el.clientWidth < el.scrollWidth)
   }
 
   const scrollHandler = (ref, dir) => {
@@ -52,48 +98,34 @@ function CustomerDashboard() {
     updateButton(cateScrollRef, setShowLeftCateButton, setShowRightCateButton)
     updateButton(shopScrollRef, setShowLeftShopButton, setShowRightShopButton)
 
-    cateScrollRef.current?.addEventListener("scroll", () =>
+    const cateScroll = () =>
       updateButton(cateScrollRef, setShowLeftCateButton, setShowRightCateButton)
-    )
-    shopScrollRef.current?.addEventListener("scroll", () =>
+
+    const shopScroll = () =>
       updateButton(shopScrollRef, setShowLeftShopButton, setShowRightShopButton)
-    )
+
+    cateScrollRef.current?.addEventListener("scroll", cateScroll)
+    shopScrollRef.current?.addEventListener("scroll", shopScroll)
+
+    return () => {
+      cateScrollRef.current?.removeEventListener("scroll", cateScroll)
+      shopScrollRef.current?.removeEventListener("scroll", shopScroll)
+    }
   }, [])
 
+  /* ================= UI ================= */
   return (
-    <div className='w-screen min-h-screen flex flex-col gap-10 items-center bg-gradient-to-b from-[#fff9f6] to-white overflow-y-auto'>
-      <Nav />
+    <div className="w-screen min-h-screen flex flex-col gap-10 items-center bg-gradient-to-b from-[#fff9f6] to-white pt-[100px]">
+      <Nav onSearch={handleSearch} />
 
-      {/* SEARCH RESULTS */}
-      {searchItems?.length > 0 && (
-        <section className='w-full max-w-6xl bg-white rounded-3xl shadow-xl p-6 mt-4'>
-          <h2 className='text-2xl sm:text-3xl font-bold text-gray-900 mb-4'>
-            Search Results
-          </h2>
-          <div className='flex flex-wrap gap-6 justify-center'>
-            {searchItems.map(item => (
-              <FoodCard key={item._id} data={item} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ================= CATEGORIES ================= */}
+      <section className="w-full max-w-6xl px-3">
+        <h2 className="text-2xl font-semibold mb-6">Choose Materials</h2>
 
-      {/* CATEGORIES */}
-      <section className='w-full max-w-6xl px-3'>
-        <h2 className="
-  text-xl sm:text-2xl md:text-3xl 
-  font-semibold text-gray-800 
-  mb-6 flex items-center gap-3
-">
-  <span className="w-2 h-8 bg-[#ff4d2d] rounded-full"></span>
-  Choose Materials
-</h2>
-
-
-        <div className='relative'>
+        <div className="relative">
           {showLeftCateButton && (
             <button
-              className='absolute left-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full shadow-xl z-10'
+              className="absolute left-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full z-10"
               onClick={() => scrollHandler(cateScrollRef, "left")}
             >
               <FaCircleChevronLeft />
@@ -102,21 +134,29 @@ function CustomerDashboard() {
 
           <div
             ref={cateScrollRef}
-            className='flex gap-5 overflow-x-auto pb-3 scroll-smooth'
+            className="flex gap-5 overflow-x-auto pb-3 scroll-smooth"
           >
             {categories.map((cate, i) => (
-              <CategoryCard
+              <div
                 key={i}
-                name={cate.category}
-                image={cate.image}
-                onClick={() => handleFilterByCategory(cate.category)}
-              />
+                onClick={() => handleCategoryClick(cate.category)}
+                className={`cursor-pointer transition-all duration-300 rounded-xl
+                  ${activeCategory === cate.category
+                    ? "ring-4 ring-[#ff4d2d] scale-105"
+                    : "opacity-80 hover:scale-105"
+                  }`}
+              >
+                <CategoryCard
+                  name={cate.category}
+                  image={cate.image}
+                />
+              </div>
             ))}
           </div>
 
           {showRightCateButton && (
             <button
-              className='absolute right-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full shadow-xl z-10'
+              className="absolute right-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full z-10"
               onClick={() => scrollHandler(cateScrollRef, "right")}
             >
               <FaCircleChevronRight />
@@ -125,58 +165,50 @@ function CustomerDashboard() {
         </div>
       </section>
 
-      {/* SHOPS */}
-      <section className='w-full max-w-6xl px-3'>
-        <h2 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-4'>
+      {/* ================= SHOPS ================= */}
+      <section className="w-full max-w-6xl px-3">
+        <h2 className="text-2xl font-semibold mb-6">
           Trusted Material Stores in {currentCity}
         </h2>
 
-        <div className='relative'>
-          {showLeftShopButton && (
-            <button
-              className='absolute left-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full shadow-xl z-10'
-              onClick={() => scrollHandler(shopScrollRef, "left")}
+        <div
+          ref={shopScrollRef}
+          className="flex gap-5 overflow-x-auto pb-3 scroll-smooth"
+        >
+          {shopInMyCity?.map(shop => (
+            <div
+              key={shop._id}
+              onClick={() => handleShopClick(shop._id)}
+              className={`cursor-pointer transition-all duration-300 rounded-xl
+                ${activeShopId === shop._id
+                  ? "ring-4 ring-[#ff4d2d] scale-105"
+                  : "opacity-80 hover:scale-105"
+                }`}
             >
-              <FaCircleChevronLeft />
-            </button>
-          )}
-
-          <div
-            ref={shopScrollRef}
-            className='flex gap-5 overflow-x-auto pb-3 scroll-smooth'
-          >
-            {shopInMyCity?.map((shop, i) => (
               <CategoryCard
-                key={i}
                 name={shop.name}
                 image={shop.image}
-                onClick={() => navigate(`/shop/${shop._id}`)}
               />
-            ))}
-          </div>
-
-          {showRightShopButton && (
-            <button
-              className='absolute right-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-3 rounded-full shadow-xl z-10'
-              onClick={() => scrollHandler(shopScrollRef, "right")}
-            >
-              <FaCircleChevronRight />
-            </button>
-          )}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ITEMS */}
-      <section className='w-full max-w-6xl px-3 pb-10'>
-        <h2 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-4'>
-          Available Materials Near You
-        </h2>
+      {/* ================= ITEMS ================= */}
+      <section className="w-full max-w-6xl px-3 pb-10">
+        <h2 className="text-2xl font-semibold mb-6">Available Materials</h2>
 
-        <div className='flex flex-wrap gap-6 justify-center'>
-          {updatedItemsList?.map((item, i) => (
-            <FoodCard key={i} data={item} />
-          ))}
-        </div>
+        {filteredItems.length === 0 ? (
+          <p className="text-gray-400 text-center text-lg">
+            No items found
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-6 justify-center">
+            {filteredItems.map(item => (
+              <FoodCard key={item._id} data={item} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )

@@ -4,6 +4,7 @@ import axios from 'axios'
 import { serverUrl } from '../App.jsx'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentCity, setCurrentState, setUserData,setCurrentAddress } from '../redux/userSlice.js'
+import { setAddress, setLocation } from '../redux/mapSlice.js'
 
 
 
@@ -18,6 +19,7 @@ export default  function useGetCity() {
     
     const latitute=position.coords.latitude;
     const longitude=position.coords.longitude;
+    dispatch(setLocation({lat:latitute,lon:longitude}))
     //to get api i visited geoapify website
     //Reverse geocoding api
     try {
@@ -28,6 +30,7 @@ export default  function useGetCity() {
     dispatch(setCurrentCity(city));
     dispatch(setCurrentState(result?.state))
     dispatch(setCurrentAddress(result?.formatted))
+    dispatch(setAddress({city:city,state:result?.state}))
     } catch (error) {
       console.error("Error fetching city:", error);
     }
